@@ -114,6 +114,44 @@
   .toast.info{background:var(--navy);}
 
   .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:290;}
+
+  /* KPI Dashboard */
+  .kpi-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+  .kpi-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;transition:transform 0.15s,box-shadow 0.15s;}
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.06);}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+  .kpi-card.kpi-overall::before{background:linear-gradient(90deg,var(--green),var(--amber));}
+  .kpi-card.kpi-cat::before{background:var(--navy);}
+  .kpi-card.kpi-general::before{background:linear-gradient(90deg,#375673,#2d4a63);}
+  .kpi-card.kpi-permitting::before{background:linear-gradient(90deg,#7c3aed,#6d28d9);}
+  .kpi-card.kpi-engineering::before{background:linear-gradient(90deg,#779d36,#5f8228);}
+  .kpi-card.kpi-procurement::before{background:linear-gradient(90deg,#e8a930,#d49a20);}
+  .kpi-card.kpi-construction::before{background:linear-gradient(90deg,#e05252,#c0392b);}
+  .kpi-card.kpi-milestones::before{background:linear-gradient(90deg,#2ecc8a,#27ae60);}
+  .kpi-card.kpi-finance::before{background:linear-gradient(90deg,#0078d4,#0060aa);}
+  .kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8a9baa;margin-bottom:6px;}
+  .kpi-value{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--navy);line-height:1;}
+  .kpi-sub{font-size:12px;color:#8a9baa;margin-top:4px;}
+  .kpi-bar-track{height:6px;background:#e9edf2;border-radius:3px;margin-top:10px;overflow:hidden;}
+  .kpi-bar-fill{height:100%;border-radius:3px;transition:width 0.6s ease-out;}
+  .kpi-bar-fill.green{background:linear-gradient(90deg,#779d36,#5f8228);}
+  .kpi-bar-fill.amber{background:linear-gradient(90deg,#e8a930,#d49a20);}
+  .kpi-bar-fill.red{background:linear-gradient(90deg,#e05252,#c0392b);}
+  .kpi-bar-fill.done{background:linear-gradient(90deg,#2ecc8a,#27ae60);}
+  .kpi-big-ring{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;position:relative;}
+  .kpi-big-ring svg{transform:rotate(-90deg);}
+  .kpi-big-pct{position:absolute;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--navy);}
+  .kpi-portfolio{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px;}
+  .kpi-proj-mini{background:#fafbfc;border:1px solid #e9edf2;border-radius:8px;padding:10px 12px;text-align:center;cursor:pointer;transition:all 0.15s;}
+  .kpi-proj-mini:hover{border-color:var(--green);background:#f0faf0;}
+  .kpi-proj-mini.active{border-color:var(--green);background:#f0faf0;box-shadow:0 0 0 2px rgba(119,157,54,0.15);}
+  .kpi-proj-name{font-size:11px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .kpi-proj-pct{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;margin-top:2px;}
+  .kpi-proj-bar{height:4px;background:#e9edf2;border-radius:2px;margin-top:6px;overflow:hidden;}
+  .kpi-proj-bar-fill{height:100%;border-radius:2px;transition:width 0.4s;}
+  .kpi-toggle{display:flex;gap:4px;margin-bottom:14px;}
+  .kpi-toggle-btn{padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:#4a5568;transition:all 0.15s;}
+  .kpi-toggle-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 </style>
 </head>
 <body>
@@ -304,6 +342,104 @@ function setSyncStatus(state, msg) {
 // ══════════════════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════════════════
+let kpiView = 'project'; // 'project' or 'portfolio'
+
+function getCompletionStats(project, category) {
+  const items = DATA.filter(r => (!project || r.Project === project) && (!category || r.Category === category));
+  const total = items.length;
+  const done = items.filter(r => r.Complete).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return { total, done, pct };
+}
+
+function barColor(pct) {
+  if (pct >= 100) return 'done';
+  if (pct >= 60) return 'green';
+  if (pct >= 30) return 'amber';
+  return 'red';
+}
+
+function ringSVG(pct, size, stroke, color) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  return '<svg width="'+size+'" height="'+size+'"><circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="#e9edf2" stroke-width="'+stroke+'"/><circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+circ+'" stroke-dashoffset="'+offset+'" stroke-linecap="round"/></svg>';
+}
+
+function renderKPI() {
+  const projects = [...new Set(DATA.map(r => r.Project))].filter(Boolean).sort();
+  let h = '';
+
+  h += '<div class="kpi-toggle">';
+  h += '<div class="kpi-toggle-btn' + (kpiView === 'project' ? ' active' : '') + '" onclick="kpiView=\'project\';renderAll()">Selected Project</div>';
+  h += '<div class="kpi-toggle-btn' + (kpiView === 'portfolio' ? ' active' : '') + '" onclick="kpiView=\'portfolio\';renderAll()">Portfolio Overview</div>';
+  h += '</div>';
+
+  if (kpiView === 'portfolio') {
+    // Portfolio view - all projects summary
+    const allStats = getCompletionStats(null);
+    let totalAll = 0, doneAll = 0;
+    projects.forEach(p => { const s = getCompletionStats(p); totalAll += s.total; doneAll += s.done; });
+    const pctAll = totalAll > 0 ? Math.round((doneAll / totalAll) * 100) : 0;
+
+    h += '<div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;margin-bottom:16px;">';
+    // Big ring
+    h += '<div style="text-align:center;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 28px;">';
+    h += '<div class="kpi-big-ring">' + ringSVG(pctAll, 80, 7, pctAll >= 60 ? '#779d36' : pctAll >= 30 ? '#e8a930' : '#e05252') + '<span class="kpi-big-pct">' + pctAll + '%</span></div>';
+    h += '<div class="kpi-label" style="margin-bottom:0;">Portfolio Complete</div>';
+    h += '<div class="kpi-sub">' + doneAll + ' / ' + totalAll + ' items</div>';
+    h += '</div>';
+    // Project grid
+    h += '<div class="kpi-portfolio">';
+    projects.forEach(p => {
+      const s = getCompletionStats(p);
+      const col = barColor(s.pct);
+      const fillColor = col === 'done' ? '#2ecc8a' : col === 'green' ? '#779d36' : col === 'amber' ? '#e8a930' : '#e05252';
+      h += '<div class="kpi-proj-mini' + (p === selProject ? ' active' : '') + '" data-project="' + esc(p) + '" onclick="selProject=this.dataset.project;kpiView=\'project\';renderAll()">';
+      h += '<div class="kpi-proj-name">' + esc(p) + '</div>';
+      h += '<div class="kpi-proj-pct" style="color:' + fillColor + ';">' + s.pct + '%</div>';
+      h += '<div class="kpi-proj-bar"><div class="kpi-proj-bar-fill ' + col + '" style="width:' + s.pct + '%;"></div></div>';
+      h += '<div class="kpi-sub">' + s.done + '/' + s.total + '</div>';
+      h += '</div>';
+    });
+    h += '</div></div>';
+
+  } else {
+    // Single project KPI
+    const overall = getCompletionStats(selProject);
+    const ringColor = overall.pct >= 60 ? '#779d36' : overall.pct >= 30 ? '#e8a930' : '#e05252';
+
+    h += '<div class="kpi-dash">';
+
+    // Overall progress card with ring
+    h += '<div class="kpi-card kpi-overall" style="grid-row:span 2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:160px;">';
+    h += '<div class="kpi-big-ring" style="width:90px;height:90px;">' + ringSVG(overall.pct, 90, 8, ringColor) + '<span class="kpi-big-pct" style="font-size:26px;">' + overall.pct + '%</span></div>';
+    h += '<div class="kpi-label" style="margin-top:8px;">Overall Completion</div>';
+    h += '<div class="kpi-sub">' + overall.done + ' of ' + overall.total + ' items complete</div>';
+    h += '</div>';
+
+    // Per-category cards
+    CATEGORIES.forEach(cat => {
+      const s = getCompletionStats(selProject, cat);
+      if (s.total === 0) return;
+      const catClass = 'kpi-' + cat.toLowerCase().replace(/[^a-z]/g, '');
+      const col = barColor(s.pct);
+      h += '<div class="kpi-card ' + catClass + '">';
+      h += '<div class="kpi-label">' + (CAT_ICONS[cat] || '') + ' ' + esc(cat) + '</div>';
+      h += '<div style="display:flex;justify-content:space-between;align-items:baseline;">';
+      h += '<div class="kpi-value">' + s.done + '<span style="font-size:16px;font-weight:600;color:#b0bac4;">/' + s.total + '</span></div>';
+      h += '<div style="font-family:Barlow Condensed;font-size:18px;font-weight:700;color:' + (s.pct >= 100 ? '#2ecc8a' : s.pct >= 60 ? '#779d36' : s.pct >= 30 ? '#e8a930' : '#e05252') + ';">' + s.pct + '%</div>';
+      h += '</div>';
+      h += '<div class="kpi-bar-track"><div class="kpi-bar-fill ' + col + '" style="width:' + s.pct + '%;"></div></div>';
+      h += '</div>';
+    });
+
+    h += '</div>';
+  }
+
+  return h;
+}
+
 function renderAll(projects) {
   if (!projects) projects = [...new Set(DATA.map(r => r.Project))].filter(Boolean).sort();
 
@@ -317,6 +453,9 @@ function renderAll(projects) {
 
   // Toolbar
   html += '<div class="toolbar"><input class="search-box" placeholder="🔍 Search topics..." oninput="doSearch(this.value)" value="' + (searchQ||'') + '"><span class="sync-status" id="syncStatus"></span></div>';
+
+  // KPI Dashboard
+  html += '<div id="kpiDash">' + renderKPI() + '</div>';
 
   // Content
   html += '<div id="catContent">';
@@ -403,8 +542,10 @@ function toggleComplete(project, category, topic, checkbox) {
   const row = checkbox.closest(".topic-row");
   if (checkbox.checked) row.classList.add("completed"); else row.classList.remove("completed");
   if (itemId) queueSave(itemId, "Complete", checkbox.checked);
-  // Update counter
+  // Update counter + KPI
   document.getElementById("catContent").innerHTML = renderCategories();
+  var kpiEl = document.getElementById("kpiDash");
+  if (kpiEl) kpiEl.innerHTML = renderKPI();
   showToast(checkbox.checked ? "✓ Marked complete" : "↩ Reopened", "ok");
 }
 
