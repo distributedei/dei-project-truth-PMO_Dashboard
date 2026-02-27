@@ -7,19 +7,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <style>
-  :root{--navy:#375673;--green:#779d36;--amber:#e8a930;--red:#e05252;--bg:#f5f7fa;}
+  :root{--navy:#375673;--green:#779d36;--amber:#e8a930;--red:#e05252;--bg:#f5f7fa;--sidebar-w:240px;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Barlow',sans-serif;background:var(--bg);color:#1a1a1a;}
 
-  /* Top bar */
-  .topbar{background:linear-gradient(135deg,#375673,#2d4a63);color:#fff;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;}
-  .topbar h1{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;} .topbar h1 span{color:#a8c76a;}
-  .topbar-right{display:flex;gap:10px;align-items:center;}
-  .topbar-sub{color:rgba(255,255,255,0.5);font-size:12px;}
-  .user-badge{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);}
-  .btn-login{padding:8px 16px;border-radius:8px;border:none;background:#0078d4;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;}
-  .btn-login:hover{background:#106ebe;}
-  .container{max-width:1400px;margin:0 auto;padding:20px;}
+  /* Layout */
+  .app-layout{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#2d4a63 0%,#1e3548 100%);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform 0.2s;}
+  .sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  .sidebar-logo h1{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;display:flex;align-items:center;gap:8px;}
+  .sidebar-logo h1 span{color:#a8c76a;}
+  .sidebar-logo .sub{font-size:11px;color:rgba(255,255,255,0.35);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+  .sidebar-nav{flex:1;overflow-y:auto;padding:12px 0;}
+  .sidebar-section{padding:0 16px;margin-bottom:16px;}
+  .sidebar-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.3);padding:8px 8px 6px;display:flex;align-items:center;gap:6px;}
+  .sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.65);cursor:pointer;transition:all 0.15s;margin-bottom:2px;position:relative;}
+  .sidebar-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.9);}
+  .sidebar-item.active{background:var(--green);color:#fff;}
+  .sidebar-item .icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+  .sidebar-item .badge{position:absolute;right:10px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;}
+  .sidebar-divider{height:1px;background:rgba(255,255,255,0.06);margin:8px 16px;}
+  .sidebar-user{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.1);}
+  .sidebar-user-role{display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+  .sidebar-user-role.admin{background:var(--green);color:#fff;}
+  .sidebar-user-name{font-size:14px;font-weight:700;color:#fff;}
+  .sidebar-user-email{font-size:11px;color:rgba(255,255,255,0.45);margin-top:1px;}
+  .sidebar-signout{display:block;width:100%;margin-top:12px;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;}
+  .sidebar-signout:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.3);}
+
+  /* Main content area */
+  .main-area{margin-left:var(--sidebar-w);flex:1;min-height:100vh;}
+  .container{max-width:1400px;margin:0 auto;padding:20px 24px;}
+
+  /* Login card */
+  .login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+  .login-card{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.08);width:420px;overflow:hidden;}
+  .login-card-head{padding:32px 32px 24px;text-align:center;}
+  .login-card-logo{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+  .login-card-logo span{color:var(--green);}
+  .login-card-sub{font-size:13px;color:#8a9baa;}
+  .login-card-body{padding:0 32px 32px;}
+  .login-card-divider{height:1px;background:#e2e8f0;margin-bottom:24px;}
+  .login-card-ms{width:100%;padding:14px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;color:#1a1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.15s;}
+  .login-card-ms:hover{border-color:#0078d4;background:#f8fbff;box-shadow:0 2px 8px rgba(0,120,212,0.1);}
+  .login-card-ms svg{flex-shrink:0;}
+  .login-card-footer{padding:16px 32px;background:#fafbfc;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#b0bac4;}
+
   .loading{text-align:center;padding:60px;color:#8a9baa;font-size:14px;}
   .loading .spinner{display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px;}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -183,24 +218,88 @@
 </head>
 <body>
 
-<div class="topbar">
-  <div>
-    <h1>PMO <span>Report</span> <span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);vertical-align:middle;">LIVE</span></h1>
-    <div class="topbar-sub">Connected to SharePoint · Real-time read/write</div>
-  </div>
-  <div class="topbar-right">
-    <span class="user-badge" id="userBadge" style="display:none;"></span>
-    <button class="btn-login" id="btnLogin" onclick="doLogin()">
-      <svg width="16" height="16" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
-      Sign In
-    </button>
+<!-- Login Screen (shown before auth) -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-card-head">
+      <div class="login-card-logo">DEI <span>PMO Report</span></div>
+      <div class="login-card-sub">Project Management Office — Live Dashboard</div>
+    </div>
+    <div class="login-card-body">
+      <div class="login-card-divider"></div>
+      <button class="login-card-ms" onclick="doLogin()">
+        <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+        Sign in with Microsoft
+      </button>
+    </div>
+    <div class="login-card-footer">Connected to SharePoint · Real-time read/write</div>
   </div>
 </div>
 
-<div class="container">
-  <div id="mainContent">
-    <div class="loading"><div class="spinner"></div><br>Sign in to load PMO data from SharePoint</div>
+<!-- App Layout (shown after auth) -->
+<div id="appLayout" class="app-layout" style="display:none;">
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a8c76a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'%3E%3C/path%3E%3C/svg%3E" alt="" style="width:20px;height:20px;">
+        <h1>DEI</h1>
+      </div>
+      <div class="sub">Project Truth — PMO</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Project</div>
+        <div class="sidebar-item active" onclick="setSidebarView('overview')">
+          <span class="icon">📊</span> Overview
+        </div>
+        <div class="sidebar-item" onclick="setSidebarView('executive')">
+          <span class="icon">📋</span> Executive Roll-up
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Logs</div>
+        <div class="sidebar-item" onclick="setSidebarView('engineering')">
+          <span class="icon">⚙️</span> Engineering Log
+        </div>
+        <div class="sidebar-item" onclick="setSidebarView('permits')">
+          <span class="icon">🏛</span> Permits
+        </div>
+        <div class="sidebar-item" onclick="setSidebarView('closeout')">
+          <span class="icon">📦</span> Closeout
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Admin</div>
+        <div class="sidebar-item" onclick="setSidebarView('settings')">
+          <span class="icon">⚙️</span> Settings
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-role admin" id="userRole">ADMIN</div>
+      <div class="sidebar-user-name" id="sidebarUserName">—</div>
+      <div class="sidebar-user-email" id="sidebarUserEmail">—</div>
+      <button class="sidebar-signout" onclick="doSignOut()">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main-area">
+    <div class="container">
+      <div id="mainContent">
+        <div class="loading"><div class="spinner"></div><br>Loading PMO data from SharePoint...</div>
+      </div>
+    </div>
   </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -258,9 +357,12 @@ async function initAuth() {
     }
     if (account) {
       currentUser = account.name;
-      document.getElementById("userBadge").textContent = account.name;
-      document.getElementById("userBadge").style.display = "";
-      document.getElementById("btnLogin").style.display = "none";
+      // Switch from login screen to app layout
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("appLayout").style.display = "flex";
+      // Populate sidebar user info
+      document.getElementById("sidebarUserName").textContent = account.name || "User";
+      document.getElementById("sidebarUserEmail").textContent = account.username || "";
       loadFromSharePoint();
     }
   } catch (e) { console.error("Init:", e); }
@@ -268,6 +370,21 @@ async function initAuth() {
 
 async function doLogin() {
   try { await msalInstance.loginRedirect({ scopes: SCOPES }); } catch (e) { showToast("Login failed: " + e.message, "err"); }
+}
+
+function doSignOut() {
+  msalInstance.logoutRedirect({ postLogoutRedirectUri: REDIRECT });
+}
+
+let sidebarView = 'overview';
+function setSidebarView(view) {
+  sidebarView = view;
+  document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.remove('active'); });
+  event.currentTarget.classList.add('active');
+  // For now only overview is functional, others are placeholders
+  if (view !== 'overview') {
+    showToast(view.charAt(0).toUpperCase() + view.slice(1) + " — coming soon", "info");
+  }
 }
 
 async function getToken() {
