@@ -152,6 +152,30 @@
   .kpi-toggle{display:flex;gap:4px;margin-bottom:14px;}
   .kpi-toggle-btn{padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:#4a5568;transition:all 0.15s;}
   .kpi-toggle-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  /* Modal */
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:400;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.15s;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal{background:#fff;border-radius:12px;width:480px;max-height:80vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:slideUp 0.2s ease-out;}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal-head{padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;}
+  .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--navy);}
+  .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#8a9baa;padding:4px 8px;border-radius:4px;}.modal-close:hover{background:#f0f4f8;}
+  .modal-body{padding:24px;overflow-y:auto;max-height:60vh;}
+  .modal-footer{padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;}
+  .form-group{margin-bottom:16px;}
+  .form-label{display:block;font-size:12px;font-weight:700;color:#8a9baa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .form-input{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:14px;transition:all 0.15s;}
+  .form-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(119,157,54,0.15);}
+  .form-hint{font-size:11px;color:#b0bac4;margin-top:4px;}
+  .btn-cancel{padding:8px 18px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#4a5568;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}.btn-cancel:hover{background:#f8fafb;}
+  .btn-create{padding:8px 18px;border-radius:6px;border:none;background:linear-gradient(135deg,#779d36,#5f8228);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}.btn-create:hover{filter:brightness(1.1);}.btn-create:disabled{opacity:0.5;cursor:not-allowed;}
+  .var-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .var-tag{padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;background:#f0f4f8;color:#4a5568;border:1px solid #e2e8f0;display:flex;align-items:center;gap:4px;}
+  .var-tag .x{cursor:pointer;color:#b0bac4;font-size:14px;line-height:1;}.var-tag .x:hover{color:var(--red);}
+  .var-add-row{display:flex;gap:6px;margin-top:8px;}
+  .var-add-input{flex:1;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:'Barlow',sans-serif;}.var-add-input:focus{outline:none;border-color:var(--green);}
+  .var-add-btn{padding:6px 12px;border-radius:6px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -177,6 +201,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="addProjectModal" style="display:none;"></div>
 <div id="commentPanel"></div>
 
 <script>
@@ -452,7 +477,7 @@ function renderAll(projects) {
   html += '</div>';
 
   // Toolbar
-  html += '<div class="toolbar"><input class="search-box" placeholder="🔍 Search topics..." oninput="doSearch(this.value)" value="' + (searchQ||'') + '"><span class="sync-status" id="syncStatus"></span></div>';
+  html += '<div class="toolbar"><input class="search-box" placeholder="🔍 Search topics..." oninput="doSearch(this.value)" value="' + (searchQ||'') + '"><button class="add-proj-btn" onclick="showAddProject()">+ New Project</button><span class="sync-status" id="syncStatus"></span></div>';
 
   // KPI Dashboard
   html += '<div id="kpiDash">' + renderKPI() + '</div>';
@@ -740,6 +765,108 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = "toast show " + (type || "ok");
   setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ══════════════════════════════════════════════════
+// NEW PROJECT
+// ══════════════════════════════════════════════════
+let _newVars = [];
+
+function showAddProject() {
+  const modal = document.getElementById("addProjectModal");
+  modal.style.display = "";
+  modal.innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeAddProject()">' +
+    '<div class="modal">' +
+    '<div class="modal-head"><div class="modal-title">+ New Project</div><button class="modal-close" onclick="closeAddProject()">\u2715</button></div>' +
+    '<div class="modal-body">' +
+    '<div class="form-group"><label class="form-label">Project Name *</label><input class="form-input" id="newProjName" placeholder="e.g. Discovery Way" oninput="validateNewProj()"></div>' +
+    '<div class="form-group"><label class="form-label">Client</label><input class="form-input" id="newProjClient" placeholder="e.g. NextEra, Bluewave"></div>' +
+    '<div class="form-group"><label class="form-label">State</label><input class="form-input" id="newProjState" placeholder="e.g. NY, MA, PA"></div>' +
+    '<div class="form-group"><label class="form-label">Custom Variables</label>' +
+    '<div class="form-hint">Add project-specific fields that appear at the top of the project view</div>' +
+    '<div id="varList" class="var-list"></div>' +
+    '<div class="var-add-row"><input class="var-add-input" id="varName" placeholder="Variable name..." onkeydown="if(event.key===\'Enter\')addVar()"><input class="var-add-input" id="varValue" placeholder="Value..." onkeydown="if(event.key===\'Enter\')addVar()"><button class="var-add-btn" onclick="addVar()">+ Add</button></div>' +
+    '</div></div>' +
+    '<div class="modal-footer"><button class="btn-cancel" onclick="closeAddProject()">Cancel</button><button class="btn-create" id="btnCreateProj" onclick="createProject()" disabled>\u26A1 Create Project</button></div>' +
+    '</div></div>';
+  _newVars = [];
+  renderVarList();
+  document.getElementById("newProjName").focus();
+}
+
+function closeAddProject() { document.getElementById("addProjectModal").style.display = "none"; }
+
+function validateNewProj() {
+  var name = document.getElementById("newProjName").value.trim();
+  var existing = [...new Set(DATA.map(function(r){return r.Project;}))];
+  document.getElementById("btnCreateProj").disabled = !name || existing.indexOf(name) >= 0;
+}
+
+function addVar() {
+  var n = document.getElementById("varName").value.trim();
+  var v = document.getElementById("varValue").value.trim();
+  if (!n) return;
+  _newVars.push({name:n,value:v});
+  document.getElementById("varName").value = "";
+  document.getElementById("varValue").value = "";
+  document.getElementById("varName").focus();
+  renderVarList();
+}
+
+function removeVar(idx) { _newVars.splice(idx,1); renderVarList(); }
+
+function renderVarList() {
+  var el = document.getElementById("varList");
+  if (!el) return;
+  if (_newVars.length === 0) { el.innerHTML = '<span style="font-size:12px;color:#c4d0dc;">No custom variables yet</span>'; return; }
+  el.innerHTML = _newVars.map(function(v,i) {
+    return '<span class="var-tag">' + esc(v.name) + (v.value ? ': ' + esc(v.value) : '') + '<span class="x" onclick="removeVar('+i+')">\u00d7</span></span>';
+  }).join("");
+}
+
+async function createProject() {
+  var name = document.getElementById("newProjName").value.trim();
+  var client = document.getElementById("newProjClient").value.trim();
+  var state = document.getElementById("newProjState").value.trim();
+  if (!name) return;
+
+  // Get topics from first project as template
+  var refProject = DATA.find(function(r){return r.Project;});
+  if (!refProject) return;
+  var templateProject = refProject.Project;
+  var templateRows = DATA.filter(function(r){return r.Project === templateProject;});
+
+  // Create rows in SharePoint
+  var created = 0;
+  for (var i = 0; i < templateRows.length; i++) {
+    var ref = templateRows[i];
+    var newRow = {
+      Title: name + " \u2014 " + ref.Topic,
+      Project: name,
+      Category: ref.Category,
+      Topic: ref.Topic,
+      Value: "",
+      SortOrder: ref.SortOrder
+    };
+    DATA.push(newRow);
+    // Also create in SharePoint
+    try {
+      var resp = await graph("POST", LIST + "/items", { fields: {
+        Title: newRow.Title, Project: newRow.Project, Category: newRow.Category,
+        Topic: newRow.Topic, Value: "", SortOrder: newRow.SortOrder
+      }});
+      if (resp && resp.id) {
+        spItemMap[name + "|" + ref.Category + "|" + ref.Topic] = resp.id;
+        newRow.id = resp.id;
+      }
+      created++;
+    } catch(e) { console.error("Failed to create item:", e); }
+  }
+
+  closeAddProject();
+  selProject = name;
+  renderAll();
+  showToast("\u26A1 " + name + " created with " + created + " items in SharePoint", "ok");
 }
 
 // Init
