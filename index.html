@@ -36,6 +36,13 @@
   .sidebar-user-email{font-size:11px;color:rgba(255,255,255,0.45);margin-top:1px;}
   .sidebar-signout{display:block;width:100%;margin-top:12px;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;}
   .sidebar-signout:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.3);}
+  .sidebar-projects{max-height:40vh;overflow-y:auto;}
+  .sidebar-proj{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.55);cursor:pointer;transition:all 0.15s;margin-bottom:1px;}
+  .sidebar-proj:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
+  .sidebar-proj.active{background:rgba(119,157,54,0.2);color:#a8c76a;}
+  .sidebar-proj .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .sidebar-proj .pname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sidebar-proj .ppct{font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);}
 
   /* Main content area */
   .main-area{margin-left:var(--sidebar-w);flex:1;min-height:100vh;}
@@ -251,25 +258,27 @@
 
     <div class="sidebar-nav">
       <div class="sidebar-section">
-        <div class="sidebar-section-label">Project</div>
+        <div class="sidebar-section-label">Dashboard</div>
         <div class="sidebar-item active" onclick="setSidebarView('overview')">
           <span class="icon">📊</span> Overview
-        </div>
-        <div class="sidebar-item" onclick="setSidebarView('executive')">
-          <span class="icon">📋</span> Executive Roll-up
         </div>
       </div>
 
       <div class="sidebar-section">
+        <div class="sidebar-section-label">Projects</div>
+        <div id="sidebarProjects" class="sidebar-projects"></div>
+      </div>
+
+      <div class="sidebar-section">
         <div class="sidebar-section-label">Logs</div>
-        <div class="sidebar-item" onclick="setSidebarView('engineering')">
-          <span class="icon">⚙️</span> Engineering Log
+        <div class="sidebar-item" onclick="setSidebarView('rfi')">
+          <span class="icon">📝</span> RFI &amp; Submittal Log
         </div>
-        <div class="sidebar-item" onclick="setSidebarView('permits')">
-          <span class="icon">🏛</span> Permits
+        <div class="sidebar-item" onclick="setSidebarView('cost')">
+          <span class="icon">💰</span> Cost
         </div>
-        <div class="sidebar-item" onclick="setSidebarView('closeout')">
-          <span class="icon">📦</span> Closeout
+        <div class="sidebar-item" onclick="setSidebarView('progress')">
+          <span class="icon">📈</span> Progress
         </div>
       </div>
 
@@ -380,11 +389,19 @@ let sidebarView = 'overview';
 function setSidebarView(view) {
   sidebarView = view;
   document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.remove('active'); });
-  event.currentTarget.classList.add('active');
-  // For now only overview is functional, others are placeholders
-  if (view !== 'overview') {
-    showToast(view.charAt(0).toUpperCase() + view.slice(1) + " — coming soon", "info");
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+  if (view === 'rfi') {
+    // Link to the V3 RFI/Submittal tracker
+    window.open('https://distributedei.github.io/dei-project-truth-v3/', '_blank');
+    return;
   }
+  if (view === 'overview') {
+    renderAll();
+    return;
+  }
+  // Placeholder for future views
+  showToast(view.charAt(0).toUpperCase() + view.slice(1) + " — coming soon", "info");
 }
 
 async function getToken() {
@@ -609,6 +626,7 @@ function renderAll(projects) {
 
   document.getElementById("mainContent").innerHTML = html;
   setTimeout(autoGrowAll, 0);
+  renderSidebarProjects();
 }
 
 function renderCategories() {
@@ -689,6 +707,23 @@ function autoGrowAll() {
   });
 }
 function selectProject(p) { selProject = p; renderAll(); }
+
+function renderSidebarProjects() {
+  var el = document.getElementById("sidebarProjects");
+  if (!el) return;
+  var projects = [...new Set(DATA.map(function(r){return r.Project;}))].filter(Boolean).sort();
+  var html = "";
+  projects.forEach(function(p) {
+    var s = getCompletionStats(p);
+    var col = s.pct >= 100 ? '#2ecc8a' : s.pct >= 60 ? '#779d36' : s.pct >= 30 ? '#e8a930' : '#e05252';
+    html += '<div class="sidebar-proj' + (p === selProject ? ' active' : '') + '" data-project="' + esc(p) + '" onclick="selectProject(this.dataset.project)">';
+    html += '<span class="dot" style="background:' + col + ';"></span>';
+    html += '<span class="pname">' + esc(p) + '</span>';
+    html += '<span class="ppct">' + s.pct + '%</span>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
 function doSearch(q) { searchQ = q.toLowerCase(); document.getElementById("catContent").innerHTML = renderCategories(); setTimeout(autoGrowAll, 0); }
 function toggleCat(cat) {
   collapsed[cat] = !collapsed[cat];
