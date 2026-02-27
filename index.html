@@ -311,7 +311,7 @@ function renderAll(projects) {
   // Project tabs
   html += '<div class="proj-tabs" id="projTabs">';
   projects.forEach(p => {
-    html += '<div class="proj-tab' + (p === selProject ? ' active' : '') + '" onclick="selectProject('' + p.replace(/'/g, "\'") + '')">' + p + '</div>';
+    html += '<div class="proj-tab' + (p === selProject ? ' active' : '') + '" data-project="' + esc(p) + '" onclick="selectProject(this.dataset.project)">' + esc(p) + '</div>';
   });
   html += '</div>';
 
@@ -350,7 +350,7 @@ function renderCategories() {
     const countStyle = doneCount === rows.length && rows.length > 0 ? "color:#2ecc8a;" : "";
 
     html += '<div class="cat-section">';
-    html += '<div class="cat-header ' + cls + (isCollapsed ? ' collapsed' : '') + '" onclick="toggleCat('' + cat.replace(/'/g,"\'") + '')"><span>' + icon + ' ' + cat + '</span><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:12px;font-weight:600;' + countStyle + '">' + doneCount + '/' + rows.length + '</span><span class="cat-chevron">▼</span></span></div>';
+    html += '<div class="cat-header ' + cls + (isCollapsed ? ' collapsed' : '') + '" data-cat="' + esc(cat) + '" onclick="toggleCat(this.dataset.cat)"><span>' + icon + ' ' + esc(cat) + '</span><span style="display:flex;align-items:center;gap:12px;"><span style="font-size:12px;font-weight:600;' + countStyle + '">' + doneCount + '/' + rows.length + '</span><span class="cat-chevron">▼</span></span></div>';
     html += '<div class="cat-body' + (isCollapsed ? ' hidden' : '') + '">';
 
     rows.forEach(r => {
@@ -361,15 +361,12 @@ function renderCategories() {
       const key = r.Project + "|" + r.Category + "|" + r.Topic;
       const itemId = spItemMap[key] || "";
       const hasComm = comments[itemId] && comments[itemId].length > 0;
-      const topicEsc = r.Topic.replace(/'/g, "\'");
-      const catEsc = cat.replace(/'/g, "\'");
-      const projEsc = selProject.replace(/'/g, "\'");
 
       html += '<div class="topic-row' + (r.Complete ? ' completed' : '') + '">';
-      html += '<div class="topic-check"><input type="checkbox" ' + (r.Complete ? 'checked ' : '') + 'onchange="toggleComplete('' + projEsc + '','' + catEsc + '','' + topicEsc + '',this)"></div>';
-      html += '<div class="topic-label">' + r.Topic + '</div>';
-      html += '<div class="topic-val"><textarea rows="' + Math.max(1,lineCount) + '" class="' + emptyCls + '" onblur="onEdit('' + projEsc + '','' + catEsc + '','' + topicEsc + '',this)" onfocus="this.classList.remove('empty')">' + escaped + '</textarea></div>';
-      html += '<div class="comment-btn' + (hasComm ? ' has-comments' : '') + '" onclick="openCommentPanel('' + projEsc + '','' + catEsc + '','' + topicEsc + '','' + itemId + '')" title="Comments">💬</div>';
+      html += '<div class="topic-check"><input type="checkbox" ' + (r.Complete ? 'checked ' : '') + 'data-proj="' + esc(r.Project) + '" data-cat="' + esc(r.Category) + '" data-topic="' + esc(r.Topic) + '" onchange="toggleComplete(this.dataset.proj,this.dataset.cat,this.dataset.topic,this)"></div>';
+      html += '<div class="topic-label">' + esc(r.Topic) + '</div>';
+      html += '<div class="topic-val"><textarea rows="' + Math.max(1,lineCount) + '" class="' + emptyCls + '" data-proj="' + esc(r.Project) + '" data-cat="' + esc(r.Category) + '" data-topic="' + esc(r.Topic) + '" onblur="onEdit(this.dataset.proj,this.dataset.cat,this.dataset.topic,this)" onfocus="this.classList.remove(&quot;empty&quot;)">' + escaped + '</textarea></div>';
+      html += '<div class="comment-btn' + (hasComm ? ' has-comments' : '') + '" data-proj="' + esc(r.Project) + '" data-cat="' + esc(r.Category) + '" data-topic="' + esc(r.Topic) + '" data-itemid="' + itemId + '" onclick="openCommentPanel(this.dataset.proj,this.dataset.cat,this.dataset.topic,this.dataset.itemid)" title="Comments">💬</div>';
       html += '</div>';
     });
 
@@ -378,6 +375,7 @@ function renderCategories() {
   return html;
 }
 
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function selectProject(p) { selProject = p; renderAll(); }
 function doSearch(q) { searchQ = q.toLowerCase(); document.getElementById("catContent").innerHTML = renderCategories(); }
 function toggleCat(cat) {
@@ -496,7 +494,7 @@ function renderMentionDropdown() {
   const dd = document.getElementById("mentionDropdown");
   dd.innerHTML = mentionMatches.map((t, i) => {
     const initials = t.name.split(" ").map(n => n[0]).join("").substring(0, 2);
-    return '<div class="mention-item' + (i === mentionIdx ? ' selected' : '') + '" onclick="insertMention(TEAM.find(x=>x.email==='' + t.email + ''))"><div class="mention-avatar">' + initials + '</div><div><div class="mention-name">' + t.name + '</div><div class="mention-email">' + t.email + '</div></div></div>';
+    return '<div class="mention-item' + (i === mentionIdx ? ' selected' : '') + '" data-email="' + esc(t.email) + '" onclick="insertMention(TEAM.find(function(x){return x.email===this.dataset.email}.bind(this)))"><div class="mention-avatar">' + initials + '</div><div><div class="mention-name">' + esc(t.name) + '</div><div class="mention-email">' + esc(t.email) + '</div></div></div>';
   }).join("");
   dd.classList.add("show");
 }
