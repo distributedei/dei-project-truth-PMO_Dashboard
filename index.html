@@ -534,7 +534,21 @@ function renderCategories() {
       html += '</div>';
     });
 
+    html += '</div>';
+
+    // Add Row button at bottom of each category
+    html += '<div class="add-row-area" style="padding:8px 16px;border-top:1px solid #f0f4f8;">';
+    html += '<div class="add-row-inline" id="addRowInline_' + catId + '" style="display:none;margin-bottom:8px;">';
+    html += '<div style="display:flex;gap:8px;align-items:center;">';
+    html += '<input class="form-input" id="addRowInput_' + catId + '" placeholder="New topic name..." style="flex:1;padding:6px 10px;font-size:12px;" data-cat="' + esc(cat) + '" onkeydown="if(event.key===\'Enter\')doAddRow(this.dataset.cat,\'' + catId + '\')">';
+    html += '<button style="padding:6px 14px;border-radius:6px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;" data-cat="' + esc(cat) + '" onclick="doAddRow(this.dataset.cat,\'' + catId + '\')">Add</button>';
+    html += '<button style="padding:6px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#8a9baa;font-size:12px;cursor:pointer;" onclick="document.getElementById(\'addRowInline_' + catId + '\').style.display=\'none\'">Cancel</button>';
     html += '</div></div>';
+    html += '<div class="add-row-trigger" style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#8a9baa;font-size:12px;font-weight:600;padding:4px 0;transition:color 0.15s;" onclick="showAddRow(\'' + catId + '\')" onmouseover="this.style.color=\'var(--green)\'" onmouseout="this.style.color=\'#8a9baa\'">';
+    html += '<span style="font-size:14px;">+</span> Add row to ' + esc(cat);
+    html += '</div></div>';
+
+    html += '</div>';
   });
   return html;
 }
@@ -545,6 +559,64 @@ function doSearch(q) { searchQ = q.toLowerCase(); document.getElementById("catCo
 function toggleCat(cat) {
   collapsed[cat] = !collapsed[cat];
   document.getElementById("catContent").innerHTML = renderCategories();
+}
+
+function showAddRow(catId) {
+  var inline = document.getElementById("addRowInline_" + catId);
+  if (inline) {
+    inline.style.display = "";
+    var input = document.getElementById("addRowInput_" + catId);
+    if (input) input.focus();
+  }
+}
+
+async function doAddRow(category, catId) {
+  var input = document.getElementById("addRowInput_" + catId);
+  var topicName = input ? input.value.trim() : "";
+  if (!topicName || !selProject) return;
+
+  // Check for duplicate topic in this project+category
+  var exists = DATA.some(function(r) {
+    return r.Project === selProject && r.Category === category && r.Topic === topicName;
+  });
+  if (exists) {
+    showToast("Topic '" + topicName + "' already exists in " + category, "err");
+    return;
+  }
+
+  // Find the max SortOrder for this project+category and add 1
+  var catRows = DATA.filter(function(r) { return r.Project === selProject && r.Category === category; });
+  var maxSort = 0;
+  catRows.forEach(function(r) { if ((r.SortOrder || 0) > maxSort) maxSort = r.SortOrder || 0; });
+  var newSort = maxSort + 1;
+
+  var newRow = {
+    Title: selProject + " \u2014 " + topicName,
+    Project: selProject,
+    Category: category,
+    Topic: topicName,
+    Value: "",
+    SortOrder: newSort,
+    Complete: false
+  };
+
+  // Create in SharePoint
+  try {
+    var resp = await graph("POST", LIST + "/items", { fields: {
+      Title: newRow.Title, Project: newRow.Project, Category: newRow.Category,
+      Topic: newRow.Topic, Value: "", SortOrder: newRow.SortOrder
+    }});
+    if (resp && resp.id) {
+      spItemMap[selProject + "|" + category + "|" + topicName] = resp.id;
+      newRow.id = resp.id;
+    }
+    DATA.push(newRow);
+    renderAll();
+    showToast("+ Added '" + topicName + "' to " + category, "ok");
+  } catch(e) {
+    console.error("Failed to add row:", e);
+    showToast("Failed to add row: " + e.message, "err");
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -772,6 +844,103 @@ function showToast(msg, type) {
 // ══════════════════════════════════════════════════
 let _newVars = [];
 
+// Hardcoded project template — 87 standard topics across 7 categories
+const PROJECT_TEMPLATE = [
+  // General (8)
+  {cat:"General",topic:"Contract",sort:1},
+  {cat:"General",topic:"Contract Action Item List",sort:2},
+  {cat:"General",topic:"Contract Flow Down Provisions",sort:3},
+  {cat:"General",topic:"Insurance - through GC Pay",sort:4},
+  {cat:"General",topic:"Bond",sort:5},
+  {cat:"General",topic:"DEI",sort:6},
+  {cat:"General",topic:"Subcontractor",sort:7},
+  {cat:"General",topic:"NTP/LNTP",sort:8},
+  // Permitting (5)
+  {cat:"Permitting",topic:"Building Permit",sort:9},
+  {cat:"Permitting",topic:"Electrical Permit",sort:10},
+  {cat:"Permitting",topic:"SWPPP/ENOI",sort:11},
+  {cat:"Permitting",topic:"Fire Permit",sort:12},
+  {cat:"Permitting",topic:"Driveway Permit",sort:13},
+  // Engineering (24)
+  {cat:"Engineering",topic:"Civil IFCs",sort:14},
+  {cat:"Engineering",topic:"Site topo done and confirmed included in design?",sort:15},
+  {cat:"Engineering",topic:"Site topo done if array grading was involved?",sort:16},
+  {cat:"Engineering",topic:"Electrical IFCs",sort:17},
+  {cat:"Engineering",topic:"Racking IFCs",sort:18},
+  {cat:"Engineering",topic:"Structural IFCs",sort:19},
+  {cat:"Engineering",topic:"DAS",sort:20},
+  {cat:"Engineering",topic:"IE/Client Approved?",sort:21},
+  {cat:"Engineering",topic:"Procurement (Equipment/Materials)",sort:22},
+  {cat:"Engineering",topic:"Modules",sort:23},
+  {cat:"Engineering",topic:"Racking",sort:24},
+  {cat:"Engineering",topic:"Yellow Jackets,if required?",sort:25},
+  {cat:"Engineering",topic:"Inverters",sort:26},
+  {cat:"Engineering",topic:"Combiner Boxes",sort:27},
+  {cat:"Engineering",topic:"Switchboards",sort:28},
+  {cat:"Engineering",topic:"MV XFMR",sort:29},
+  {cat:"Engineering",topic:"GXFMR",sort:30},
+  {cat:"Engineering",topic:"Aux Panelboard/XFMR",sort:31},
+  {cat:"Engineering",topic:"GOAB",sort:32},
+  {cat:"Engineering",topic:"Recloser",sort:33},
+  {cat:"Engineering",topic:"Metering Cluster/Meter",sort:34},
+  {cat:"Engineering",topic:"ESS",sort:36},
+  {cat:"Engineering",topic:"DC/DC Converters",sort:37},
+  {cat:"Engineering",topic:"Controller/EMS",sort:38},
+  // Procurement (Subcontractors) (8)
+  {cat:"Procurement (Subcontractors)",topic:"Survey",sort:39},
+  {cat:"Procurement (Subcontractors)",topic:"Civil Work",sort:40},
+  {cat:"Procurement (Subcontractors)",topic:"Post Install",sort:41},
+  {cat:"Procurement (Subcontractors)",topic:"Rack & Module Install",sort:42},
+  {cat:"Procurement (Subcontractors)",topic:"LV Electrical Work + DAS",sort:43},
+  {cat:"Procurement (Subcontractors)",topic:"MV ElectricalWork",sort:44},
+  {cat:"Procurement (Subcontractors)",topic:"Fence",sort:45},
+  {cat:"Procurement (Subcontractors)",topic:"Landscaping/Seeding, if different",sort:46},
+  // Construction (31)
+  {cat:"Construction",topic:"Safety/HASP",sort:47},
+  {cat:"Construction",topic:"QA/QC Workbook",sort:48},
+  {cat:"Construction",topic:"Premob checklist",sort:49},
+  {cat:"Construction",topic:"Page Turn",sort:50},
+  {cat:"Construction",topic:"Pre-Con Meeting with Town",sort:51},
+  {cat:"Construction",topic:"Mobilization ready",sort:52},
+  {cat:"Construction",topic:"AI Clearing",sort:53},
+  {cat:"Construction",topic:"SWPPP Inspection",sort:54},
+  {cat:"Construction",topic:"AHJ inspection",sort:55},
+  {cat:"Construction",topic:"Soil Test",sort:56},
+  {cat:"Construction",topic:"Seeding Status",sort:57},
+  {cat:"Construction",topic:"Interconnection Status",sort:58},
+  {cat:"Construction",topic:"Close-Out Set-Up?",sort:59},
+  {cat:"Construction",topic:"Schedule",sort:60},
+  {cat:"Construction",topic:"Mobilization",sort:61},
+  {cat:"Construction",topic:"Civil Work Start",sort:62},
+  {cat:"Construction",topic:"Civil Work Finish",sort:63},
+  {cat:"Construction",topic:"Trenching + Pads Start",sort:64},
+  {cat:"Construction",topic:"Trenching + Pads Finish",sort:65},
+  {cat:"Construction",topic:"Post Install Start",sort:66},
+  {cat:"Construction",topic:"Post Install Finish",sort:67},
+  {cat:"Construction",topic:"Rack Install Start",sort:68},
+  {cat:"Construction",topic:"Rack Install Finish",sort:69},
+  {cat:"Construction",topic:"Module Install Start",sort:70},
+  {cat:"Construction",topic:"Module Install Finish",sort:71},
+  {cat:"Construction",topic:"DC Work Start",sort:72},
+  {cat:"Construction",topic:"DC Work Finish",sort:73},
+  {cat:"Construction",topic:"AC Work Start",sort:74},
+  {cat:"Construction",topic:"AC Work Finish",sort:75},
+  {cat:"Construction",topic:"MV Work Start",sort:76},
+  {cat:"Construction",topic:"MV Work Finish",sort:77},
+  // Milestones (6)
+  {cat:"Milestones",topic:"NTP/Mob",sort:78},
+  {cat:"Milestones",topic:"MC",sort:79},
+  {cat:"Milestones",topic:"WT",sort:80},
+  {cat:"Milestones",topic:"PTO",sort:81},
+  {cat:"Milestones",topic:"SC",sort:82},
+  {cat:"Milestones",topic:"FC",sort:83},
+  // Finance (4)
+  {cat:"Finance",topic:"IRA/Dom Content Set-up & Progress?",sort:84},
+  {cat:"Finance",topic:"Buyout sheet",sort:85},
+  {cat:"Finance",topic:"Contract Change Orders?",sort:86},
+  {cat:"Finance",topic:"Current/Upcoming Invoice Status",sort:87}
+];
+
 function showAddProject() {
   const modal = document.getElementById("addProjectModal");
   modal.style.display = "";
@@ -830,43 +999,51 @@ async function createProject() {
   var state = document.getElementById("newProjState").value.trim();
   if (!name) return;
 
-  // Get topics from first project as template
-  var refProject = DATA.find(function(r){return r.Project;});
-  if (!refProject) return;
-  var templateProject = refProject.Project;
-  var templateRows = DATA.filter(function(r){return r.Project === templateProject;});
+  var templateRows = PROJECT_TEMPLATE;
+
+  // Disable button and show progress
+  var btn = document.getElementById("btnCreateProj");
+  btn.disabled = true;
+  btn.textContent = "Creating... 0/" + templateRows.length;
 
   // Create rows in SharePoint
   var created = 0;
+  var failed = 0;
   for (var i = 0; i < templateRows.length; i++) {
     var ref = templateRows[i];
     var newRow = {
-      Title: name + " \u2014 " + ref.Topic,
+      Title: name + " \u2014 " + ref.topic,
       Project: name,
-      Category: ref.Category,
-      Topic: ref.Topic,
+      Category: ref.cat,
+      Topic: ref.topic,
       Value: "",
-      SortOrder: ref.SortOrder
+      SortOrder: ref.sort,
+      Complete: false
     };
-    DATA.push(newRow);
-    // Also create in SharePoint
     try {
       var resp = await graph("POST", LIST + "/items", { fields: {
         Title: newRow.Title, Project: newRow.Project, Category: newRow.Category,
         Topic: newRow.Topic, Value: "", SortOrder: newRow.SortOrder
       }});
       if (resp && resp.id) {
-        spItemMap[name + "|" + ref.Category + "|" + ref.Topic] = resp.id;
+        spItemMap[name + "|" + ref.cat + "|" + ref.topic] = resp.id;
         newRow.id = resp.id;
       }
+      DATA.push(newRow);
       created++;
-    } catch(e) { console.error("Failed to create item:", e); }
+    } catch(e) {
+      console.error("Failed to create item " + ref.cat + "/" + ref.topic + ":", e);
+      failed++;
+    }
+    btn.textContent = "Creating... " + (i + 1) + "/" + templateRows.length;
   }
 
   closeAddProject();
   selProject = name;
   renderAll();
-  showToast("\u26A1 " + name + " created with " + created + " items in SharePoint", "ok");
+  var msg = "\u26A1 " + name + " created with " + created + " items";
+  if (failed > 0) msg += " (" + failed + " failed)";
+  showToast(msg, failed > 0 ? "info" : "ok");
 }
 
 // Init
